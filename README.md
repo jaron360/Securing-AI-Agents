@@ -222,6 +222,7 @@ agent = Agent(
 1. **Output echoing** - Agent may repeat sensitive data from user input
 2. **Resource exhaustion** - No built-in rate limiting
 3. **Indirect injection** - Malicious content from scraped sources could influence behavior
+4. **Security Features** - No input validation or santization included apart from source LLM defaults
 
 
 ## Resources
