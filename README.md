@@ -1,6 +1,6 @@
-# Cybersecurity Incident Detection Agent
+# Cybersecurity News Summarization Agent
 
-An AI-powered agent that monitors the internet for cybersecurity incidents, breaches, and vulnerabilities in the past 24 hours.
+An AI-powered agent built with **AWS Strands SDK** that monitors the internet for cybersecurity incidents, breaches, and vulnerabilities in the past 24 hours.
 
 ## Features
 
@@ -10,31 +10,47 @@ The agent checks multiple sources:
 - **NVD (National Vulnerability Database)** - Newly published CVEs
 - **Security News Sites** - Bleeping Computer, The Hacker News RSS feeds
 
+## Why AWS Strands SDK?
+
+This agent is built with AWS Strands Agents SDK, Amazon's open-source framework for building AI agents:
+
+- **Minimal code** - ~170 lines vs 250+ with LangChain
+- **AWS-native** - Built specifically for AWS Bedrock
+- **Model-driven** - LLM handles planning and tool selection
+- **Simple API** - Just define model, system prompt, and tools
+- **Production-ready** - Used by AWS customers in production
+
 ## How It Works
 
-Uses AWS Bedrock (Claude 3.5 Haiku) with LangGraph to:
-1. Query multiple security information sources
-2. Filter for incidents from the past 24 hours
-3. Analyze and summarize findings intelligently
-4. Provide conversational responses to your questions
-
-## Architecture
-
 ```
-User Questions 
+User Question
     ↓
-LangGraph Agent (Claude 3.5 Haiku)
+Strands Agent (Claude 3.5 Haiku)
     ↓
-Tool Selection & Execution
-    ├─→ CheckHackerNews (web scraping)
-    ├─→ CheckReddit (Reddit API)
-    ├─→ CheckCVE (NVD API)
-    └─→ CheckSecurityNews (RSS feeds)
-    ↓
-AI Analysis & Summary
+Agentic Loop (automatic)
+    ├─→ Model decides which tools to use
+    ├─→ Executes tools (web scraping, API calls)
+    ├─→ Processes results
+    └─→ Repeats until answer is complete
     ↓
 Conversational Response
 ```
+
+## Architecture
+
+```python
+from strands import Agent
+
+agent = Agent(
+    model="anthropic.claude-3-5-haiku-20241022-v1:0",
+    system_prompt="You are a cybersecurity analyst...",
+    tools=[check_hacker_news, check_reddit, check_cve, check_news]
+)
+
+response = agent("What's the security news today?")
+```
+
+That's it! Strands handles the agentic loop automatically.
 
 ## Setup
 
@@ -81,32 +97,28 @@ aws bedrock list-foundation-models --region us-west-2 --query 'modelSummaries[?c
 
 ## Usage
 
-### Interactive Chat Mode (Recommended)
+### Run the Agent
 
 ```bash
 # Activate virtual environment
 source venv/bin/activate
 
-# Run the chat interface
-python simple_chat.py
-```
+# Run the agent (standalone)
+python agent_strands.py
 
-Then ask questions like:
-- "What's the security news for today?"
-- "Are there any new vulnerabilities?"
-- "What incidents happened in the past 24 hours?"
-- "Show me the latest CVEs"
-- "What's trending on Hacker News about security?"
+# Or run via the chat wrapper
+python simple_chat_strands.py
+```
 
 ### Example Conversation
 
 ```
-🔒 Security Incident Detection Agent
+🔒 Security Incident Detection Agent (AWS Strands SDK)
 ================================================================================
 
 💬 You: What's the security news for today?
 
-🤖 Agent: Let me check the latest sources for you...
+🤖 Agent: Checking sources...
 
 📊 Based on the search results, here are some recent cybersecurity-related discussions:
 
@@ -127,143 +139,74 @@ SECURITY NEWS:
 - The Hacker News: Supply chain attack on popular npm package
 
 Would you like me to elaborate on any of these topics?
-
-💬 You: Tell me more about the Apache vulnerability
-
-🤖 Agent: Let me get more details...
 ```
 
 ## Configuration
 
 ### Model Settings
 
-Located in `agent.py`:
+Located in `agent_strands.py`:
 
 ```python
-llm = ChatBedrock(
-    model_id="anthropic.claude-3-5-haiku-20241022-v1:0",  # Claude 3.5 Haiku
-    region_name="us-west-2",
-    model_kwargs={
-        "temperature": 0.1,      # Low = more focused responses
-        "max_tokens": 4096       # Maximum response length
-    }
+agent = Agent(
+    model="anthropic.claude-3-5-haiku-20241022-v1:0",  # Model ID
+    system_prompt="...",  # Agent instructions
+    tools=[...]  # Available tools
 )
 ```
 
-### Available Tools
+### Change the Model
 
-The agent has access to these tools (defined in `agent.py`):
-
-1. **CheckHackerNews** - Scrapes Hacker News for security keywords
-2. **CheckReddit** - Queries Reddit security subreddits via API
-3. **CheckCVE** - Fetches recent CVEs from NVD API
-4. **CheckSecurityNews** - Parses RSS feeds from security news sites
-
-### Customization
-
-**Change the model:**
 ```python
-# Use Claude 3 Haiku (faster, cheaper)
-model_id="anthropic.claude-3-haiku-20240307-v1:0"
+# Use Claude 3 Haiku (older, but works)
+model="anthropic.claude-3-haiku-20240307-v1:0"
 
-# Use Claude 3.7 Sonnet (more capable, requires inference profile)
-model_id="anthropic.claude-3-7-sonnet-20250219-v1:0"
+# Use Claude 3.5 Haiku (current)
+model="anthropic.claude-3-5-haiku-20241022-v1:0"
 ```
 
-**Adjust time window:**
+### Adjust Time Window
+
+In each tool function:
 ```python
-# In each tool function, change:
-if datetime.now() - created < timedelta(days=1):  # 24 hours
-# To:
-if datetime.now() - created < timedelta(hours=12):  # 12 hours
+# From 24 hours to 12 hours
+if datetime.now() - created < timedelta(hours=12):
 ```
 
-**Add more sources:**
+### Add Custom Tools
+
 ```python
-def check_custom_source(query=""):
+def check_custom_source():
     """Your custom security source"""
     # Implementation
     return json.dumps(results)
 
-# Add to tools list
-tools.append(Tool(
-    name="CheckCustomSource",
-    func=check_custom_source,
-    description="Description for the agent"
-))
+# Add to agent
+agent = Agent(
+    model="...",
+    system_prompt="...",
+    tools=[
+        check_hacker_news,
+        check_reddit_security,
+        check_cve_recent,
+        check_security_news_sites,
+        check_custom_source  # Your new tool
+    ]
+)
 ```
 
-### Deploy to Lambda
 
-```bash
-# Install dependencies
-pip install -r requirements.txt -t .
 
-# Create deployment package
-zip -r function.zip . -x "*.git*" -x "*__pycache__*" -x "*.pyc"
+## Strands SDK vs LangChain Comparison
 
-# Create Lambda function
-aws lambda create-function \
-  --function-name security-incident-agent \
-  --runtime python3.11 \
-  --handler lambda_handler.lambda_handler \
-  --zip-file fileb://function.zip \
-  --role arn:aws:iam::ACCOUNT_ID:role/lambda-execution-role \
-  --timeout 300 \
-  --memory-size 512
-```
-
-### Schedule with EventBridge
-
-```bash
-# Create rule to run daily at 8 AM UTC
-aws events put-rule \
-  --name daily-security-check \
-  --schedule-expression "cron(0 8 * * ? *)"
-
-# Add Lambda as target
-aws events put-targets \
-  --rule daily-security-check \
-  --targets "Id"="1","Arn"="arn:aws:lambda:REGION:ACCOUNT:function:security-incident-agent"
-
-# Grant EventBridge permission to invoke Lambda
-aws lambda add-permission \
-  --function-name security-incident-agent \
-  --statement-id AllowEventBridge \
-  --action lambda:InvokeFunction \
-  --principal events.amazonaws.com \
-  --source-arn arn:aws:events:REGION:ACCOUNT:rule/daily-security-check
-```
-
-## Sample Output
-
-```
-SECURITY INCIDENT REPORT
-================================================================================
-
-Analysis Period: Past 24 hours
-
-HACKER NEWS HIGHLIGHTS:
-- Major data breach at XYZ Corp affecting 10M users
-- New zero-day vulnerability in popular web framework
-- Ransomware attack on healthcare provider
-
-REDDIT DISCUSSIONS:
-- Active discussion on recent supply chain attack
-- New phishing campaign targeting developers
-
-CVE VULNERABILITIES:
-- CVE-2024-XXXXX: Critical RCE in Apache component (CVSS 9.8)
-- CVE-2024-XXXXY: High severity SQL injection (CVSS 8.1)
-
-SECURITY NEWS:
-- Bleeping Computer: Nation-state APT group targets financial sector
-- The Hacker News: New malware strain discovered in the wild
-
-SUMMARY:
-Critical incidents detected in the past 24 hours. Immediate attention required
-for CVE-2024-XXXXX. Monitor ongoing discussions about supply chain attacks.
-```
+| Feature | Strands SDK | LangChain + LangGraph |
+|---------|-------------|----------------------|
+| Lines of code | ~170 | ~250 |
+| Dependencies | 1 (strands-agents) | 3 (langchain, langchain-aws, langchain-community) |
+| Agent creation | `Agent(model, system_prompt, tools)` | `create_react_agent(llm, tools, prompt)` |
+| Invocation | `agent(input)` | `agent_executor.invoke({"messages": [...]})` |
+| AWS integration | Native | Via langchain-aws |
+| Agentic loop | Automatic | Manual configuration |
 
 ## Security Considerations
 
@@ -272,6 +215,7 @@ for CVE-2024-XXXXX. Monitor ongoing discussions about supply chain attacks.
 1. **Claude's Constitutional AI** - Inherent resistance to prompt injection
 2. **Tool-calling architecture** - Agent can only use predefined, read-only tools
 3. **Limited scope** - Tools only perform web scraping, no file system or database access
+4. **Strands SDK safety** - Built-in guardrails and observability
 
 ### Known Limitations
 
@@ -279,95 +223,10 @@ for CVE-2024-XXXXX. Monitor ongoing discussions about supply chain attacks.
 2. **Resource exhaustion** - No built-in rate limiting
 3. **Indirect injection** - Malicious content from scraped sources could influence behavior
 
-### Security Enhancements Available
 
-A `security_layer.py` module is included with:
-- Input validation and sanitization
-- Output redaction (API keys, credentials)
-- Prompt injection detection
-- Rate limiting framework
+## Resources
 
-To integrate security layer, see the implementation guide in the file.
-
-### Recommended for Production
-
-1. **Add AWS Bedrock Guardrails** for content filtering
-2. **Implement rate limiting** (per user/IP)
-3. **Enable CloudWatch logging** for audit trails
-4. **Deploy in VPC** with private subnets
-5. **Use API Gateway** with authentication
-6. **Add WAF rules** to block malicious requests
-
-## File Structure
-
-```
-security-agent/
-├── agent.py              # Main agent logic and configuration
-├── simple_chat.py        # Interactive chat interface
-├── security_layer.py     # Security guardrails (optional)
-├── lambda_handler.py     # AWS Lambda wrapper
-├── requirements.txt      # Python dependencies
-├── README.md            # This file
-└── terraform/           # Infrastructure as Code
-    ├── main.tf          # Terraform configuration
-    └── variables.tf     # Terraform variables
-```
-
-## Deploy to AWS Lambda
-
-### Package the Function
-
-```bash
-# Install dependencies in current directory
-pip install -r requirements.txt -t .
-
-# Create deployment package
-zip -r function.zip . -x "*.git*" -x "*__pycache__*" -x "*.pyc" -x "venv/*" -x "terraform/*"
-```
-
-### Create Lambda Function
-
-```bash
-aws lambda create-function \
-  --function-name security-incident-agent \
-  --runtime python3.11 \
-  --handler lambda_handler.lambda_handler \
-  --zip-file fileb://function.zip \
-  --role arn:aws:iam::ACCOUNT_ID:role/lambda-execution-role \
-  --timeout 300 \
-  --memory-size 512 \
-  --environment Variables={SNS_TOPIC_ARN=arn:aws:sns:REGION:ACCOUNT:security-incidents}
-```
-
-### IAM Permissions Required
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "bedrock:InvokeModel"
-      ],
-      "Resource": "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ],
-      "Resource": "arn:aws:logs:*:*:*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "sns:Publish"
-      ],
-      "Resource": "arn:aws:sns:*:*:security-incidents"
-    }
-  ]
-}
-```
+- [AWS Strands Agents SDK Documentation](https://strandsagents.com/)
+- [AWS Blog: Introducing Strands Agents](https://aws.amazon.com/blogs/opensource/introducing-strands-agents/)
+- [Strands GitHub Repository](https://github.com/awslabs/strands)
+- [Amazon Bedrock Documentation](https://docs.aws.amazon.com/bedrock/)
