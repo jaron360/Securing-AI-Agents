@@ -1,12 +1,11 @@
 """
-Simple chat interface for the security agent
-Run this for an interactive conversation
+Simple chat interface for the Strands-based security agent
 """
-from agent import agent_executor
+from agent_strands import agent
 
 def main():
     print("=" * 80)
-    print("🔒 Security Incident Detection Agent")
+    print("🔒 Security Incident Detection Agent (AWS Strands SDK)")
     print("=" * 80)
     print("\nAsk me about today's cybersecurity news and incidents!")
     print("\nExamples:")
@@ -31,12 +30,10 @@ def main():
             
             print("\n🤖 Agent: Let me check the latest sources for you...\n")
             
-            # Run the agent with user's question
-            result = agent_executor.invoke({"messages": [("human", user_input)]})
+            # Run the agent
+            response = agent(user_input)
             
-            # Extract the final message
-            final_message = result['messages'][-1].content
-            print(f"📊 {final_message}\n")
+            print(f"📊 {response}\n")
             
         except KeyboardInterrupt:
             print("\n\n👋 Goodbye!")
