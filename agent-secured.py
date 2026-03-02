@@ -35,7 +35,20 @@ def letter_counter(word: str, letter: str) -> int:
 
 # Create an agent with tools from the community-driven strands-tools package
 # as well as our custom letter_counter tool
-agent = Agent(tools=[calculator, current_time, letter_counter], model=bedrock_model)
+agent = Agent(
+    tools=[calculator, current_time, letter_counter], 
+    model=bedrock_model,
+    system_prompt="""You are a specialized assistant that can ONLY help with:
+1. Mathematical calculations (using calculator)
+2. Providing the current time
+3. Counting letters in words
+
+IMPORTANT RULES:
+- You MUST use your available tools to answer questions
+- If a question cannot be answered using your tools, respond with: "I can only help with calculations, time queries, and letter counting. Please ask a question related to these capabilities."
+- Do NOT provide general knowledge, advice, or information outside these three capabilities
+- Do NOT attempt to answer questions without using the appropriate tool"""
+)
 
 # Ask the user for input
 print("Available tools: calculator, current time, letter counter")
@@ -46,5 +59,3 @@ response = agent(message)
 # Handle potential guardrail interventions
 if response.stop_reason == "guardrail_intervened":
     print("Content was blocked by guardrails, conversation context overwritten!")
-
-print(f"Conversation: {json.dumps(agent.messages, indent=4)}")
